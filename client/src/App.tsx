@@ -5,14 +5,16 @@ import "./App.css";
 import droidVideo from "./assets/video/droid.mp4";
 import TextType from "./components/TypeText";
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+
 const App = () => {
   const [showPiano, setShowPiano] = useState<boolean>(false);
   const [inputValue, setInputValue] = useState<string>("");
   const [isFlagCorrect, setIsFlagCorrect] = useState<boolean>(false);
   const [isFlagVisible, setFlagVisible] = useState<boolean>(false);
   const [isError, setIsError] = useState<boolean>(false);
-
-  const rightCombination: string = "gggeugeug";
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [flag, setFlag] = useState<string>("");
 
   const inputBg = isFlagCorrect
     ? "#3dbe02"
@@ -20,13 +22,34 @@ const App = () => {
       ? "#e53935"
       : "rgb(57, 57, 185)";
 
-  const handleClick = () => {
-    if (inputValue === rightCombination) {
-      setIsFlagCorrect(true);
-      setIsError(false);
-    } else {
-      setIsFlagCorrect(false);
+  const handleClick = async () => {
+    if (isLoading) return;
+
+    setIsLoading(true);
+    setIsError(false);
+
+    try {
+      const res = await fetch(`${API_URL}/api/check`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ combination: inputValue }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setIsFlagCorrect(true);
+        setIsError(false);
+        setFlag(data.flag);
+      } else {
+        setIsFlagCorrect(false);
+        setIsError(true);
+      }
+    } catch (err) {
+      console.error("Ошибка запроса:", err);
       setIsError(true);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -79,7 +102,7 @@ const App = () => {
         {isFlagCorrect ? (
           <>
             <TextType
-              text={"Да... Это она... Забирай... "}
+              text={"Да... Это она... Забирай..."}
               // typingSpeed={125}
               typingSpeed={500}
               pauseDuration={1500000}
@@ -92,9 +115,7 @@ const App = () => {
               loop={false}
               onTypingComplete={() => setFlagVisible(true)}
             />
-            {isFlagVisible && (
-              <p className="flag">flag&#123;v@der_wa3_4ere&#125;</p>
-            )}
+            {isFlagVisible && <p className="flag">{flag}</p>}
           </>
         ) : null}
 
